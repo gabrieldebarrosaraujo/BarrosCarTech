@@ -1,36 +1,74 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { ProgressBar, MD3Colors } from "react-native-paper";
-import { FontAwesome5 } from "@expo/vector-icons"; 
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from "react-native";
+import Svg, { Circle, Line } from "react-native-svg";
 
-const performanceData = [
-  { id: "throttle", label: "Abertura da Borboleta", value: 75, unit: "%" },
-  { id: "rpm", label: "RPM do Veículo", value: 3200, unit: "RPM" },
-  { id: "boost", label: "Pressão da Turbina", value: 1.2, unit: "bar" },
-  { id: "oilTemp", label: "Temperatura do Óleo", value: 90, unit: "°C" },
-  { id: "waterTemp", label: "Temperatura da Água", value: 85, unit: "°C" },
-  { id: "lambda", label: "Sonda Lambda", value: 0.85, unit: "λ" },
+const initialData = [
+  { id: "rpm", label: "RPM", value: 3200, unit: "RPM" },
+  { id: "throttle", label: "Borboleta", value: 75, unit: "%" },
+  { id: "boost", label: "Boost", value: 1.2, unit: "bar" },
+  { id: "waterTemp", label: "Água", value: 90, unit: "°C" },
+  { id: "oilTemp", label: "Óleo", value: 85, unit: "°C" },
+  { id: "lambda", label: "Lambda", value: 0.85, unit: "λ" },
 ];
 
 const PerformanceScreen: React.FC = () => {
+  const [params, setParams] = useState(
+    initialData.map((item) => ({
+      ...item,
+      mode: "digital", // ou "analog"
+      theme: "light",  // ou "dark"
+    }))
+  );
+
+  const toggleMode = (id: string) => {
+    setParams((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          const nextTheme = item.theme === "light" ? "dark" : "light";
+          const nextMode = item.mode === "digital" ? "analog" : "digital";
+          return { ...item, theme: nextTheme, mode: nextMode };
+        }
+        return item;
+      })
+    );
+  };
+
+  const renderGauge = (item: typeof params[0]) => {
+    const needleAngle = (item.value / 100) * 180 - 90;
+    const themeStyles = item.theme === "dark" ? styles.dark : styles.light;
+
+    return (
+      <TouchableOpacity style={[styles.block, themeStyles]} onPress={() => toggleMode(item.id)}>
+        <Text style={styles.label}>{item.label}</Text>
+        {item.mode === "digital" ? (
+          <Text style={styles.value}>{item.value} {item.unit}</Text>
+        ) : (
+          <Svg height="100" width="100">
+            <Circle cx="50" cy="50" r="45" stroke="gray" strokeWidth="4" fill="none" />
+            <Line
+              x1="50"
+              y1="50"
+              x2={50 + 40 * Math.cos((needleAngle * Math.PI) / 180)}
+              y2={50 + 40 * Math.sin((needleAngle * Math.PI) / 180)}
+              stroke="red"
+              strokeWidth="3"
+            />
+          </Svg>
+        )}
+        <Text style={styles.unit}>{item.unit}</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Desempenho do Veículo</Text>
-
-      {performanceData.map((item) => (
-        <View key={item.id} style={styles.card}>
-          <FontAwesome5 name="tachometer-alt" size={20} color="#333" />
-          <View style={styles.info}>
-            <Text style={styles.label}>{item.label}</Text>
-            <Text style={styles.value}>
-              {item.value} {item.unit}
-            </Text>
-            {item.unit === "%" && (
-              <ProgressBar progress={item.value / 100} color={MD3Colors.primary70} style={styles.progress} />
-            )}
-          </View>
-        </View>
-      ))}
+      <FlatList
+        data={params}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        renderItem={({ item }) => renderGauge(item)}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+      />
     </View>
   );
 };
@@ -38,44 +76,36 @@ const PerformanceScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
-    padding: 20,
+    padding: 10,
+    backgroundColor: "#eee",
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  card: {
-    flexDirection: "row",
+  block: {
+    width: "48%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    marginVertical: 10,
     alignItems: "center",
-    backgroundColor: "#FFF",
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  info: {
-    marginLeft: 10,
-    flex: 1,
+    justifyContent: "center",
+    padding: 10,
   },
   label: {
     fontSize: 16,
     fontWeight: "bold",
+    marginBottom: 6,
   },
   value: {
-    fontSize: 18,
-    color: "#333",
+    fontSize: 22,
+    fontWeight: "bold",
   },
-  progress: {
-    height: 8,
-    borderRadius: 4,
-    marginTop: 5,
+  unit: {
+    marginTop: 6,
+    fontSize: 14,
+  },
+  light: {
+    backgroundColor: "#fff",
+  },
+  dark: {
+    backgroundColor: "#1c1c1e",
   },
 });
 
